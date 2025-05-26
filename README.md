@@ -14,7 +14,7 @@ A comprehensive system for detecting the "Nine Dash Line" (also known as "đư�
 
 - **Backend**: FastAPI application handling file uploads, AI processing, and results
 - **Frontend**: React application with Tailwind CSS for a responsive user interface
-- **AI Model**: Faster R-CNN with ResNet-50 backbone for detection
+- **AI Model**: Faster R-CNN with VGG-16 backbone for detection
 
 ## Getting Started
 
@@ -59,7 +59,7 @@ npm run dev
 
 ## Usage
 
-1. Open your browser and navigate to http://localhost:3000
+1. Open your browser and navigate to http://localhost:8080
 2. Use the upload interface to upload an image, video, or PDF
 3. Wait for the processing to complete
 4. View the detection results, including whether the Nine Dash Line was detected and visual highlights
