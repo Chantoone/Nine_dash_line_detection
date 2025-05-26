@@ -1,0 +1,202 @@
+Dưới đây là kế hoạch phát triển chi tiết cho hệ thống phát hiện hình ảnh "đường lưỡi bò" dựa trên mô hình Faster R-CNN, với backend sử dụng FastAPI và frontend sử dụng ReactJS + Vite.
+
+1. Kiến trúc tổng quan
+Hệ thống sẽ hoạt động theo luồng sau:
+
+graph LR
+    A[Frontend (ReactJS + Vite)] --> B(Upload ảnh/video/file)
+    B --> C{Backend API (FastAPI)}
+    C --> D[Xử lý ảnh/video/tài liệu + Mô hình Faster-RCNN]
+    D --> E[Trả kết quả phát hiện]
+    E --> A
+
+Frontend (ReactJS + Vite): Giao diện người dùng cho phép tải lên các loại file (ảnh, video, PDF) và hiển thị kết quả phát hiện.
+
+Backend API (FastAPI): Nhận yêu cầu từ frontend, xử lý file, gọi mô hình AI và trả về kết quả.
+
+Module xử lý ảnh/video/tài liệu + Mô hình Faster-RCNN: Lõi của hệ thống, nơi các file được tiền xử lý và đưa vào mô hình AI để phát hiện.
+
+2. Các tính năng chính
+2.1. Giao diện người dùng (React + Vite)
+Đăng tải file: Hỗ trợ tải lên các file ảnh (JPG, PNG), video (MP4, AVI) và tài liệu PDF.
+
+Hiển thị tiến trình xử lý: Thông báo cho người dùng biết file đang được xử lý.
+
+Hiển thị kết quả:
+
+Thông báo rõ ràng: "Có đường lưỡi bò" hoặc "Không có đường lưỡi bò".
+
+Kèm theo ảnh minh họa (nếu có phát hiện), với các hộp giới hạn (bounding box) và độ tin cậy (confidence score).
+
+Lịch sử upload (tùy chọn): Lưu trữ và hiển thị các lần tải lên trước đó cùng kết quả.
+
+Giao diện responsive: Đảm bảo hiển thị tốt trên các thiết bị khác nhau (máy tính, điện thoại, máy tính bảng).
+
+2.2. Backend API (FastAPI)
+Endpoint /upload:
+
+Nhận file ảnh, video hoặc PDF từ frontend.
+
+Kiểm tra định dạng file để đảm bảo tính hợp lệ.
+
+Lưu file tạm thời trên server để xử lý.
+
+Gọi hàm xử lý tương ứng dựa trên loại file.
+
+Module xử lý:
+
+Ảnh: Chuyển ảnh sang định dạng tensor phù hợp cho mô hình, chạy mô hình và lấy kết quả.
+
+Video: Trích xuất các frame (khung hình) từ video theo tần suất nhất định (ví dụ: mỗi 1 giây hoặc mỗi 10 frame), chạy mô hình trên từng frame và tổng hợp kết quả.
+
+PDF: Chuyển từng trang của tài liệu PDF thành ảnh, sau đó chạy mô hình trên từng ảnh đã chuyển đổi.
+
+Trả kết quả:
+
+result: Giá trị boolean (true/false) cho biết có phát hiện "đường lưỡi bò" hay không.
+
+detections: Một danh sách các đối tượng chứa thông tin chi tiết về các phát hiện, bao gồm:
+
+image: Ảnh (hoặc đường dẫn đến ảnh) chứa đối tượng được phát hiện.
+
+bounding_box: Tọa độ của hộp giới hạn.
+
+confidence: Độ tin cậy của phát hiện.
+
+(Tùy chọn) đường dẫn ảnh minh họa kết quả: Đường dẫn đến ảnh đã được vẽ bounding box để frontend hiển thị.
+
+3. Mô hình nhận diện (Faster R-CNN)
+Mô hình đã huấn luyện: Cần có một mô hình Faster R-CNN đã được huấn luyện sẵn và đóng gói.
+
+Tối ưu hóa (tùy chọn): Chuyển mô hình sang định dạng TorchScript để tối ưu hóa hiệu suất khi triển khai trên server.
+
+Hàm detect_objects(image): Xây dựng một hàm nhận đầu vào là ảnh và trả về danh sách các hộp giới hạn, nhãn (nếu có) và điểm số tin cậy.
+
+4. Luồng xử lý theo loại file
+4.1. Ảnh
+Người dùng upload ảnh.
+
+Backend nhận ảnh và chạy mô hình Faster R-CNN trực tiếp trên ảnh đó.
+
+Trả về ảnh đã được vẽ hộp giới hạn (nếu có phát hiện) hoặc một cờ báo hiệu không có phát hiện.
+
+4.2. Video
+Người dùng upload video.
+
+Backend trích xuất các frame từ video (ví dụ: mỗi 1 giây hoặc mỗi 10 frame).
+
+Chạy mô hình trên từng frame đã trích xuất.
+
+Nếu có ít nhất một frame phát hiện "đường lưỡi bò", hệ thống kết luận video có chứa đối tượng.
+
+Trả về danh sách các frame có phát hiện (tùy chọn: kèm theo video preview ngắn).
+
+4.3. PDF
+Người dùng upload tài liệu PDF.
+
+Backend chuyển đổi mỗi trang PDF thành một ảnh riêng biệt (sử dụng thư viện như pdf2image).
+
+Chạy mô hình trên từng ảnh đã chuyển đổi từ trang PDF.
+
+Tổng hợp kết quả từ tất cả các trang, trả về kết luận cuối cùng.
+
+5. Cấu trúc thư mục backend (FastAPI)
+app/
+├── main.py             # Điểm khởi động ứng dụng FastAPI
+├── api/
+│   └── endpoints.py    # Định nghĩa các API endpoint (ví dụ: /upload)
+├── core/
+│   ├── config.py       # Cấu hình ứng dụng (ví dụ: đường dẫn mô hình)
+│   └── model.py        # Tải và quản lý mô hình Faster R-CNN
+├── services/
+│   ├── process_image.py # Logic xử lý file ảnh
+│   ├── process_video.py # Logic xử lý file video
+│   └── process_pdf.py   # Logic xử lý file PDF
+├── utils/
+│   ├── file.py         # Các hàm tiện ích liên quan đến đọc/ghi file
+│   └── visual.py       # Các hàm tiện ích để vẽ bounding box lên ảnh
+
+6. Kế hoạch phát triển theo giai đoạn
+Giai đoạn
+
+Nội dung
+
+Công nghệ đề xuất
+
+1. Chuẩn bị
+
+Đóng gói mô hình Faster R-CNN, cấu trúc project ban đầu
+
+PyTorch, FastAPI
+
+2. Backend cơ bản
+
+Tạo API nhận ảnh, chạy model, trả kết quả
+
+FastAPI
+
+3. Mở rộng hỗ trợ video
+
+Trích frame, xử lý nhiều ảnh
+
+OpenCV
+
+4. Hỗ trợ tài liệu PDF
+
+Dùng pdf2image + PIL để chuyển PDF sang ảnh
+
+FastAPI, pdf2image, Pillow
+
+5. Frontend upload + hiển thị
+
+Xây dựng form upload, hiển thị kết quả ban đầu
+
+ReactJS, Vite, TailwindCSS
+
+6. Kết nối frontend/backend
+
+Gửi file từ FE lên BE, nhận và hiển thị JSON kết quả
+
+Axios
+
+7. Triển khai nội bộ
+
+Docker hóa ứng dụng hoặc triển khai để test cục bộ
+
+Docker (tùy chọn)
+
+8. Triển khai thực tế
+
+Triển khai server lên môi trường sản phẩm (ví dụ: Azure VM)
+
+Nginx + Uvicorn (cho FastAPI)
+
+7. Công nghệ/Thư viện đề xuất
+Mục đích
+
+Thư viện/Công nghệ
+
+Xử lý ảnh
+
+Pillow, opencv-python
+
+Xử lý PDF
+
+pdf2image, PyMuPDF
+
+Mô hình AI
+
+torch, torchvision
+
+Phát triển Backend
+
+FastAPI, uvicorn, python-multipart
+
+Phát triển Frontend
+
+React, Vite, TailwindCSS
+
+Giao tiếp Frontend/Backend
+
+Axios
+
