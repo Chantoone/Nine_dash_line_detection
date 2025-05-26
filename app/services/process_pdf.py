@@ -1,6 +1,6 @@
 import os
 import tempfile
-from pdf2image import convert_from_path
+import fitz  # PyMuPDF
 from app.core.model import get_detector
 from app.utils.visual import draw_bounding_boxes
 from app.core.config import RESULTS_FOLDER
@@ -26,15 +26,16 @@ def process_pdf(pdf_path):
     
     # Tạo thư mục tạm để lưu các ảnh từ PDF
     temp_dir = tempfile.mkdtemp()
-    
     try:
-        # Chuyển đổi các trang PDF thành ảnh
-        pages = convert_from_path(pdf_path)
+        # Mở PDF bằng PyMuPDF
+        pdf_document = fitz.open(pdf_path)
         
-        for i, page in enumerate(pages):
+        for i, page in enumerate(pdf_document):
             # Lưu trang thành ảnh tạm thời
             page_path = os.path.join(temp_dir, f"page_{i + 1}.jpg")
-            page.save(page_path, "JPEG")
+            # Chuyển đổi trang thành hình ảnh
+            pix = page.get_pixmap(dpi=300)  # Độ phân giải 300 DPI
+            pix.save(page_path)
             
             # Phát hiện đối tượng trong trang
             page_result = detector.detect(page_path)
