@@ -9,11 +9,15 @@ from app.services.process_video import process_video
 from app.services.process_pdf import process_pdf
 from app.utils.file import validate_file, get_file_type
 from app.core.config import UPLOAD_FOLDER, RESULTS_FOLDER
+import logging
 
 router = APIRouter()
 
 # Đảm bảo thư mục upload tồn tại
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Thêm logging để kiểm tra endpoint upload
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @router.get("/health")
 async def health_check():
@@ -27,6 +31,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     """
     Endpoint để upload file (ảnh, video, PDF) và phát hiện 'đường lưỡi bò'
     """
+    logging.info("Received a file upload request.")
     # Tạo tên file duy nhất
     file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
@@ -41,6 +46,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     try:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+        logging.info(f"File saved: {file_path}, File size: {os.path.getsize(file_path)} bytes")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi lưu file: {str(e)}")
     
@@ -56,6 +62,8 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             # Xóa file nếu không được hỗ trợ
             os.remove(file_path)
             raise HTTPException(status_code=400, detail="Định dạng file không được hỗ trợ")
+        
+        logging.info(f"Processing result: {result}")
         
         # Chuyển đổi đường dẫn file thành URL có thể truy cập
         base_url = str(request.base_url).rstrip('/')
@@ -82,6 +90,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         
         return JSONResponse(content=result)
     except Exception as e:
+        logging.error(f"Error while processing file: {str(e)}")
         # Xóa file nếu xử lý gặp lỗi
         if os.path.exists(file_path):
             os.remove(file_path)
